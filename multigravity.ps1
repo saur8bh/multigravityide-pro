@@ -20,8 +20,12 @@ param (
 $BASE = if ($env:MULTIGRAVITY_HOME) { $env:MULTIGRAVITY_HOME } else { "$env:USERPROFILE\AntigravityProfiles" }
 
 function Find-Antigravity {
+    # 1. Look for Antigravity IDE (Antigravity 2.0+ standalone IDE)
     $paths = @(
-        "$env:LOCALAPPDATA\Programs\Antigravity\Antigravity.exe",
+        "$env:LOCALAPPDATA\Programs\Antigravity IDE\Antigravity IDE.exe",
+        "$env:PROGRAMFILES\Antigravity IDE\Antigravity IDE.exe",
+        "${env:ProgramFiles(x86)}\Antigravity IDE\Antigravity IDE.exe",
+        "$env:LOCALAPPDATA\Programs\antigravity\Antigravity.exe",
         "$env:PROGRAMFILES\Antigravity\Antigravity.exe",
         "${env:ProgramFiles(x86)}\Antigravity\Antigravity.exe"
     )
@@ -29,9 +33,14 @@ function Find-Antigravity {
         if (Test-Path $p) { return $p }
     }
     
-    # Try to find in PATH
-    $exeCommand = Get-Command antigravity.exe -ErrorAction SilentlyContinue
-    if ($exeCommand) { return $exeCommand.Source }
+    # 2. Try to find in PATH (antigravity-ide.cmd, antigravity-ide.exe, etc.)
+    $exeCommand = Get-Command antigravity-ide.cmd, antigravity-ide.exe, antigravity-ide, antigravity.cmd, antigravity.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($exeCommand) {
+        # If it's a wrapper .cmd (like bin\antigravity-ide.cmd), resolve to parent Antigravity IDE.exe if present
+        $parentExe = Join-Path (Split-Path (Split-Path $exeCommand.Source -Parent) -Parent) "Antigravity IDE.exe"
+        if (Test-Path $parentExe) { return $parentExe }
+        return $exeCommand.Source
+    }
     
     return $null
 }
@@ -39,11 +48,23 @@ function Find-Antigravity {
 $APP = if ($env:MULTIGRAVITY_APP) { $env:MULTIGRAVITY_APP } else { Find-Antigravity }
 
 function Get-DefaultUserDataDir {
-    return "$env:APPDATA\Antigravity"
+    if (Test-Path "$env:APPDATA\Antigravity IDE") {
+        return "$env:APPDATA\Antigravity IDE"
+    }
+    if (Test-Path "$env:APPDATA\Antigravity") {
+        return "$env:APPDATA\Antigravity"
+    }
+    return "$env:APPDATA\Antigravity IDE"
 }
 
 function Get-DefaultExtensionsDir {
-    return "$env:USERPROFILE\.antigravity\extensions"
+    if (Test-Path "$env:USERPROFILE\.antigravity-ide\extensions") {
+        return "$env:USERPROFILE\.antigravity-ide\extensions"
+    }
+    if (Test-Path "$env:USERPROFILE\.antigravity\extensions") {
+        return "$env:USERPROFILE\.antigravity\extensions"
+    }
+    return "$env:USERPROFILE\.antigravity-ide\extensions"
 }
 
 function Get-TemplatesDir {
@@ -76,7 +97,8 @@ function Write-Usage {
     Write-Host "  doctor                  Run a system diagnosis"
     Write-Host "  stats                   Show storage usage per profile"
     Write-Host "  completion              Show setup instructions for shell completion"
-    Write-Host "  <name>                  Launch Antigravity with the given profile"
+    Write-Host "  uninstall [--force]     Completely uninstall Multigravity and delete all profiles"
+    Write-Host "  <name>                  Launch Antigravity IDE with the given profile"
     Write-Host "  help                    Show this help"
     Write-Host ""
     Write-Host "Profile names: alphanumeric and hyphens only (e.g. work, personal, test-1)"
@@ -98,9 +120,13 @@ function Invoke-CreateProfile {
     param($PROFILE)
     $PROFILE_DIR = "$BASE\$PROFILE"
 
-    New-Item -ItemType Directory -Force -Path "$PROFILE_DIR\.antigravity\extensions" | Out-Null
-    New-Item -ItemType Directory -Force -Path "$PROFILE_DIR\AppData\Roaming" | Out-Null
+    New-Item -ItemType Directory -Force -Path "$PROFILE_DIR\.antigravity-ide\extensions" | Out-Null
+    New-Item -ItemType Directory -Force -Path "$PROFILE_DIR\AppData\Roaming\Antigravity IDE" | Out-Null
     New-Item -ItemType Directory -Force -Path "$PROFILE_DIR\AppData\Local" | Out-Null
+
+    # Compatibility paths for extensions or tools querying legacy .antigravity
+    New-Item -ItemType Directory -Force -Path "$PROFILE_DIR\.antigravity\extensions" | Out-Null
+    New-Item -ItemType Directory -Force -Path "$PROFILE_DIR\AppData\Roaming\Antigravity" | Out-Null
 }
 
 function Invoke-CreateAuthOnlyProfile {
@@ -115,7 +141,7 @@ function Invoke-CreateAuthOnlyProfile {
     New-Item -ItemType File -Force -Path "$PROFILE_DIR\.auth-only" | Out-Null
 
     # Create app data dirs (holds isolated auth/account state)
-    $dataDir = "$PROFILE_DIR\AppData\Roaming\Antigravity\User"
+    $dataDir = "$PROFILE_DIR\AppData\Roaming\Antigravity IDE\User"
     New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
     New-Item -ItemType Directory -Force -Path "$PROFILE_DIR\AppData\Local" | Out-Null
 
@@ -131,13 +157,26 @@ function Invoke-CreateAuthOnlyProfile {
     }
 
     # Symlink extensions to default (shared, not copied)
-    $extDir = "$PROFILE_DIR\.antigravity\extensions"
+    $extDir = "$PROFILE_DIR\.antigravity-ide\extensions"
     if (Test-Path $defaultExt) {
         if (Test-Path $extDir) { Remove-Item $extDir -Force -ErrorAction SilentlyContinue }
-        New-Item -ItemType Directory -Force -Path "$PROFILE_DIR\.antigravity" | Out-Null
+        New-Item -ItemType Directory -Force -Path "$PROFILE_DIR\.antigravity-ide" | Out-Null
         New-Item -ItemType SymbolicLink -Path $extDir -Target $defaultExt -ErrorAction SilentlyContinue | Out-Null
+        if (!(Test-Path $extDir)) {
+            New-Item -ItemType Junction -Path $extDir -Target $defaultExt -ErrorAction SilentlyContinue | Out-Null
+        }
     } else {
         New-Item -ItemType Directory -Force -Path $extDir | Out-Null
+    }
+
+    # Also link legacy .antigravity\extensions for backward compatibility
+    $legacyExtDir = "$PROFILE_DIR\.antigravity\extensions"
+    if (Test-Path $defaultExt) {
+        New-Item -ItemType Directory -Force -Path "$PROFILE_DIR\.antigravity" | Out-Null
+        New-Item -ItemType SymbolicLink -Path $legacyExtDir -Target $defaultExt -ErrorAction SilentlyContinue | Out-Null
+        if (!(Test-Path $legacyExtDir)) {
+            New-Item -ItemType Junction -Path $legacyExtDir -Target $defaultExt -ErrorAction SilentlyContinue | Out-Null
+        }
     }
 }
 
@@ -151,23 +190,29 @@ function Invoke-LaunchProfile {
     }
 
     if ([string]::IsNullOrEmpty($APP) -or !(Test-Path $APP)) {
-        Write-Error "Error: Antigravity.exe not found"
+        Write-Error "Error: Antigravity IDE executable not found"
         exit 1
     }
 
-    Write-Host "Launching Antigravity profile '$PROFILE'"
+    Write-Host "Launching Antigravity IDE profile '$PROFILE'"
     
-    # Launch Antigravity with isolated USERPROFILE
+    # Launch Antigravity with isolated USERPROFILE and APPDATA
     $env:USERPROFILE = $PROFILE_DIR
     $env:APPDATA = "$PROFILE_DIR\AppData\Roaming"
     $env:LOCALAPPDATA = "$PROFILE_DIR\AppData\Local"
-    
+
+    $userDataDir = "$PROFILE_DIR\AppData\Roaming\Antigravity IDE"
+    $extDir = "$PROFILE_DIR\.antigravity-ide\extensions"
+    if (!(Test-Path $extDir) -and (Test-Path "$PROFILE_DIR\.antigravity\extensions")) {
+        $extDir = "$PROFILE_DIR\.antigravity\extensions"
+    }
+
+    $allArgs = @("--user-data-dir", $userDataDir, "--extensions-dir", $extDir)
     if ($ArgsToForward) {
-        Start-Process -FilePath $APP -ArgumentList $ArgsToForward
+        $allArgs += $ArgsToForward
     }
-    else {
-        Start-Process -FilePath $APP
-    }
+    
+    Start-Process -FilePath $APP -ArgumentList $allArgs
 }
 
 function Invoke-ListProfiles {
@@ -289,7 +334,7 @@ function Invoke-DeleteProfile {
             }
             Write-Host "Deleted profile '$PROFILE'"
         } catch {
-            Write-Error "Error: could not delete profile directory. Ensure Antigravity is closed and no files are in use."
+            Write-Error "Error: could not delete profile directory. Ensure Antigravity IDE is closed and no files are in use."
             Write-Host "Details: $_"
         }
     }
@@ -376,7 +421,10 @@ function Invoke-ProfileStats {
     $profiles = Get-ChildItem -Directory -Path $BASE | Where-Object { $_.Name -ne ".templates" }
     foreach ($p in $profiles) {
         $size = Get-FolderSize $p.FullName
-        $extPath = Join-Path $p.FullName ".antigravity\extensions"
+        $extPath = Join-Path $p.FullName ".antigravity-ide\extensions"
+        if (!(Test-Path $extPath)) {
+            $extPath = Join-Path $p.FullName ".antigravity\extensions"
+        }
         $extCount = if (Test-Path $extPath) { (Get-ChildItem $extPath).Count } else { 0 }
         Write-Host ("{0,-20} {1,-10} {2,-10}" -f $p.Name, $size, $extCount)
     }
@@ -392,11 +440,11 @@ function Invoke-DoctorCli {
 
     Write-Host "Checking multigravity environment..."
 
-    # 1. Antigravity Installation
+    # 1. Antigravity IDE Installation
     if ($APP -and (Test-Path $APP)) {
-        Write-Host "  [OK] Antigravity: Found at $APP"
+        Write-Host "  [OK] Antigravity IDE: Found at $APP"
     } else {
-        Write-Host "  [FAIL] Antigravity: Not found. Ensure it is installed or set MULTIGRAVITY_APP."
+        Write-Host "  [FAIL] Antigravity IDE: Not found. Ensure it is installed or set MULTIGRAVITY_APP."
         $errors++
     }
 
@@ -438,7 +486,7 @@ function Invoke-DoctorCli {
 }
 
 function Invoke-UpdateCli {
-    $script_url = "https://raw.githubusercontent.com/sujitagarwal/multigravity-cli/main/multigravity.ps1"
+    $script_url = "https://raw.githubusercontent.com/saur8bh/multigravityide-pro/main/multigravity.ps1"
     $target = $MyInvocation.MyCommand.Path
     if ([string]::IsNullOrEmpty($target)) {
         $cmdObj = Get-Command multigravity -ErrorAction SilentlyContinue
@@ -475,7 +523,7 @@ function Invoke-GenerateCompletion {
         @"
 Register-ArgumentCompleter -Native -CommandName multigravity -ScriptBlock {
     param(`$wordToComplete, `$commandAst, `$cursorPosition)
-    `$opts = @('new', 'list', 'status', 'rename', 'delete', 'clone', 'template', 'export', 'import', 'update', 'doctor', 'stats', 'completion', 'help')
+    `$opts = @('new', 'list', 'status', 'rename', 'delete', 'clone', 'template', 'export', 'import', 'update', 'doctor', 'stats', 'completion', 'uninstall', 'help')
     `$profiles = if (Test-Path '$BASE') { Get-ChildItem -Directory -Path '$BASE' | Select-Object -ExpandProperty Name } else { @() }
     (`$opts + `$profiles) | Where-Object { `$_ -like "`$wordToComplete*" } | ForEach-Object {
         [System.Management.Automation.CompletionResult]::new(`$_, `$_, 'ParameterValue', `$_)
@@ -572,8 +620,8 @@ function Invoke-StatusProfiles {
 
         # Check if running
         $status = "stopped"
-        $dataDir = "$($p.FullName)\AppData\Roaming\Antigravity"
-        $procs = Get-Process -Name "Antigravity" -ErrorAction SilentlyContinue
+        $dataDir = "$($p.FullName)\AppData\Roaming\Antigravity IDE"
+        $procs = Get-Process -Name "Antigravity IDE", "Antigravity" -ErrorAction SilentlyContinue
         if ($procs) {
             foreach ($proc in $procs) {
                 try {
@@ -678,6 +726,74 @@ function Invoke-ImportProfile {
     Write-Host "Imported profile '$PROFILE'"
 }
 
+function Invoke-UninstallCli {
+    param([switch]$Force)
+    $START_MENU = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs"
+
+    Write-Host "==========================================" -ForegroundColor Cyan
+    Write-Host "   Multigravity IDE Pro - Uninstaller    " -ForegroundColor Cyan
+    Write-Host "==========================================" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "This will remove:"
+    Write-Host "  1. Start Menu shortcuts ($START_MENU\Multigravity*)"
+    Write-Host "  2. ALL profile data & templates in $BASE" -ForegroundColor Yellow
+    Write-Host "  3. Multigravity CLI executable files from your system"
+    Write-Host ""
+
+    if (-not $Force) {
+        $confirm = Read-Host "Are you sure you want to completely uninstall Multigravity and DELETE ALL profiles? [y/N]"
+        if ($confirm -notmatch "^[Yy]$") {
+            Write-Host "Uninstall cancelled. Nothing was removed." -ForegroundColor Green
+            return
+        }
+    }
+
+    # 1. Check for running Antigravity IDE processes
+    $procs = Get-Process -Name "Antigravity IDE", "Antigravity" -ErrorAction SilentlyContinue
+    if ($procs) {
+        Write-Warning "Antigravity IDE appears to be running. Please close it if you encounter file lock errors."
+    }
+
+    # 2. Remove Start Menu shortcuts
+    Write-Host "Removing shortcuts..."
+    $shortcuts = Get-ChildItem -Path $START_MENU -Filter "Multigravity*.lnk" -ErrorAction SilentlyContinue
+    if ($shortcuts) {
+        foreach ($s in $shortcuts) {
+            Remove-Item -Path $s.FullName -Force -ErrorAction SilentlyContinue
+            Write-Host "  Removed shortcut: $($s.Name)"
+        }
+    }
+
+    # 3. Remove Profiles Directory
+    if (Test-Path $BASE) {
+        Write-Host "Removing all profiles and templates in $BASE..."
+        try {
+            Remove-Item -Path $BASE -Recurse -Force -ErrorAction Stop
+            Write-Host "  Removed: $BASE"
+        } catch {
+            Write-Error "Warning: Could not completely delete $BASE. Some files may be locked. Details: $_"
+        }
+    }
+
+    # 4. Remove Binary Files
+    $scriptPath = $MyInvocation.MyCommand.Path
+    if ([string]::IsNullOrEmpty($scriptPath)) {
+        $cmdObj = Get-Command multigravity -ErrorAction SilentlyContinue
+        if ($cmdObj) { $scriptPath = $cmdObj.Source }
+    }
+    if ($scriptPath -and (Test-Path $scriptPath)) {
+        $dir = Split-Path $scriptPath -Parent
+        $cmdWrapper = Join-Path $dir "multigravity.cmd"
+        $psScript = Join-Path $dir "multigravity.ps1"
+        if (Test-Path $cmdWrapper) { Remove-Item -Path $cmdWrapper -Force -ErrorAction SilentlyContinue }
+        if (Test-Path $psScript) { Remove-Item -Path $psScript -Force -ErrorAction SilentlyContinue }
+        Write-Host "  Removed executable files from $dir"
+    }
+
+    Write-Host ""
+    Write-Host "[OK] Multigravity IDE Pro has been completely uninstalled." -ForegroundColor Green
+}
+
 switch ($cmd) {
     "new" {
         $extraArgs = @()
@@ -725,6 +841,10 @@ switch ($cmd) {
     }
     "stats" {
         Invoke-ProfileStats
+    }
+    "uninstall" {
+        $force = ($arg1 -eq "--force" -or $arg1 -eq "-y" -or $ForwardArgs -contains "--force")
+        Invoke-UninstallCli -Force:$force
     }
     "completion" {
         if ($arg1) {

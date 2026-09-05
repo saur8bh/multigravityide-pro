@@ -210,21 +210,21 @@
 
   <div class="container">
 
-    <h1>multigravity-pro</h1>
+    <h1>multigravityide-pro</h1>
 
     <div class="badges">
-      <a href="https://github.com/Pulkit7070/multigravity-pro"><img src="https://img.shields.io/badge/GitHub-Repository-blue?logo=github" alt="Repository"></a>
-      <a href="https://github.com/Pulkit7070"><img src="https://img.shields.io/badge/GitHub-Profile-blue?logo=github" alt="Profile"></a>
-      <img src="https://img.shields.io/github/stars/Pulkit7070/multigravity-pro?style=social" alt="Stars">
+      <a href="https://github.com/saur8bh/multigravityide-pro"><img src="https://img.shields.io/badge/GitHub-Repository-blue?logo=github" alt="Repository"></a>
+      <a href="https://github.com/saur8bh"><img src="https://img.shields.io/badge/GitHub-Profile-blue?logo=github" alt="Profile"></a>
+      <img src="https://img.shields.io/github/stars/saur8bh/multigravityide-pro?style=social" alt="Stars">
     </div>
 
     <img src="assets/multigravity-logo.jpg" alt="Multigravity" class="logo">
 
-    <h2 style="margin-top: 0;">Multigravity</h2>
+    <h2 style="margin-top: 0;">Multigravity IDE Pro</h2>
 
     <p class="tagline">Run multiple Antigravity IDE profiles at the same time &mdash; each with its own accounts, settings, and extensions.</p>
 
-    <p class="subtitle">No more logging in and out. Just switch profiles instantly or use them all at once.</p>
+    <p class="subtitle">No more logging in and out. Just switch profiles instantly or use them all at once. Updated for Google Antigravity 2.0 IDE separation.</p>
 
     <blockquote>Supported OS: macOS, Windows, and Linux.</blockquote>
 
@@ -236,14 +236,14 @@
     <h3>macOS / Linux</h3>
     <p>Open your terminal and paste this:</p>
     <div class="code-block">
-      <pre><code>/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Pulkit7070/multigravity-pro/main/install.sh)"</code></pre>
+      <pre><code>/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/saur8bh/multigravityide-pro/main/install.sh)"</code></pre>
       <button class="copy-btn" onclick="copyCode(this)">Copy</button>
     </div>
 
     <h3>Windows</h3>
     <p>Open <strong>PowerShell</strong> and paste:</p>
     <div class="code-block">
-      <pre><code>irm https://raw.githubusercontent.com/Pulkit7070/multigravity-pro/main/install.ps1 | iex</code></pre>
+      <pre><code>irm https://raw.githubusercontent.com/saur8bh/multigravityide-pro/main/install.ps1 | iex</code></pre>
       <button class="copy-btn" onclick="copyCode(this)">Copy</button>
     </div>
 
@@ -441,6 +441,7 @@ multigravity import work.zip client-setup            # custom name</code></pre>
       <tr><td>multigravity doctor</td><td>Check environment health</td></tr>
       <tr><td>multigravity stats</td><td>Disk usage per profile</td></tr>
       <tr><td>multigravity update</td><td>Self-update</td></tr>
+      <tr><td>multigravity uninstall [--force]</td><td>Completely uninstall Multigravity and all profiles</td></tr>
       <tr><td>multigravity completion</td><td>Shell autocompletion setup</td></tr>
       <tr><td>multigravity help</td><td>Show help</td></tr>
     </table>
@@ -463,6 +464,11 @@ multigravity import work.zip client-setup            # custom name</code></pre>
 
     <table>
       <tr><th>Feature</th><th>Command</th><th>What it does</th></tr>
+      <tr>
+        <td>Google Antigravity 2.0 Support</td>
+        <td>All commands</td>
+        <td>Updated for Google Antigravity 2.0: Works with the standalone Antigravity IDE (<code>antigravity-ide</code> binary, separated process monitoring, isolated AppData and <code>.antigravity-ide</code> extension directories).</td>
+      </tr>
       <tr>
         <td>Auth-only profiles</td>
         <td><code>new work --auth-only</code></td>
@@ -494,10 +500,38 @@ multigravity import work.zip client-setup            # custom name</code></pre>
 
     <hr>
 
+    <!-- Uninstall -->
+    <h2>Uninstall</h2>
+    <p>To completely remove Multigravity, all profile data, launchers, and shortcuts from your system:</p>
+
+    <h3>Using the CLI command</h3>
+    <div class="code-block">
+      <pre><code>multigravity uninstall</code></pre>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <p style="font-size: 0.9em; color: #8b949e;">Add <code>--force</code> to bypass interactive confirmation.</p>
+
+    <h3>Using standalone uninstaller scripts</h3>
+    <p><strong>macOS / Linux:</strong></p>
+    <div class="code-block">
+      <pre><code>/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/saur8bh/multigravityide-pro/main/uninstall.sh)"</code></pre>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+
+    <p><strong>Windows (PowerShell):</strong></p>
+    <div class="code-block">
+      <pre><code>irm https://raw.githubusercontent.com/saur8bh/multigravityide-pro/main/uninstall.ps1 | iex</code></pre>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+
+    <hr>
+
     <!-- Credits -->
     <div class="credits">
       <h2>Credits</h2>
-      <p>Multigravity Pro is built on top of <a href="https://github.com/sujitagarwal/multigravity-cli">multigravity-cli</a> by <a href="https://github.com/sujitagarwal">Sujit Agarwal</a>.</p>
+      <p>Original Developer: <a href="https://github.com/Pulkit7070">Pulkit7070</a> for <a href="https://github.com/Pulkit7070/multigravity-pro">Pulkit7070/multigravity-pro</a>.</p>
+      <p>Foundational project: Built on top of <a href="https://github.com/sujitagarwal/multigravity-cli">multigravity-cli</a> by <a href="https://github.com/sujitagarwal">Sujit Agarwal</a>.</p>
+      <p>Antigravity 2.0 IDE compatibility updates by <a href="https://github.com/saur8bh">saur8bh</a>.</p>
       <p style="margin-top: 24px;">MIT License</p>
     </div>
 

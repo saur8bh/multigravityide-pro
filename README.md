@@ -1,14 +1,16 @@
-# multigravity-pro
+# multigravityide-pro
 
-[![GitHub Repository](https://img.shields.io/badge/GitHub-Repository-blue?logo=github)](https://github.com/Pulkit7070/multigravity-pro)
-[![GitHub Profile](https://img.shields.io/badge/GitHub-Profile-blue?logo=github)](https://github.com/Pulkit7070)
-![Stars](https://img.shields.io/github/stars/Pulkit7070/multigravity-pro?style=social)
+[![GitHub Repository](https://img.shields.io/badge/GitHub-Repository-blue?logo=github)](https://github.com/saur8bh/multigravityide-pro)
+[![GitHub Profile](https://img.shields.io/badge/GitHub-Profile-blue?logo=github)](https://github.com/saur8bh)
+![Stars](https://img.shields.io/github/stars/saur8bh/multigravityide-pro?style=social)
 
 <img src="assets/multigravity-logo.jpg" alt="Multigravity" width="80">
 
-## Multigravity
+## Multigravity IDE Pro
 
 **Run multiple Antigravity IDE profiles at the same time — each with its own accounts, settings, and extensions.**
+
+Updated for **Google Antigravity 2.0** (standalone `antigravity-ide` support).
 
 No more logging in and out. Just switch profiles instantly or use them all at once.
 
@@ -23,7 +25,7 @@ No more logging in and out. Just switch profiles instantly or use them all at on
 Open your terminal and paste this:
 
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Pulkit7070/multigravity-pro/main/install.sh)"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/saur8bh/multigravityide-pro/main/install.sh)"
 ```
 
 ### Windows
@@ -31,7 +33,7 @@ Open your terminal and paste this:
 Open **PowerShell** and paste:
 
 ```powershell
-irm https://raw.githubusercontent.com/Pulkit7070/multigravity-pro/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/saur8bh/multigravityide-pro/main/install.ps1 | iex
 ```
 
 That's it. Multigravity is now installed. Verify everything is set up correctly:
@@ -178,6 +180,7 @@ multigravity import <archive> [name]
 multigravity doctor                   Check environment health
 multigravity stats                    Disk usage per profile
 multigravity update                   Self-update
+multigravity uninstall [--force]      Completely uninstall Multigravity and all profiles
 multigravity completion               Shell autocompletion setup
 multigravity help
 ```
@@ -197,6 +200,7 @@ multigravity help
 
 | Feature | Command | What it does |
 |---|---|---|
+| Google Antigravity 2.0 Support | All commands | Updated for Google Antigravity 2.0: Works with the standalone Antigravity IDE (`antigravity-ide` command, `Antigravity IDE.exe`, separated process monitoring, isolated AppData and `.antigravity-ide` extension directories). |
 | Auth-only profiles | `new work --auth-only` | Share extensions and settings across profiles, isolate only the login. Near-zero disk usage. |
 | Profile templates | `template save work py-dev` | Save a configured profile as a reusable starting point. `new x --from py-dev` to stamp out copies. |
 | Status dashboard | `status` | See which profiles are running, their type, last used time, and disk size — at a glance. |
@@ -207,9 +211,57 @@ Everything from the original [multigravity-cli](https://github.com/sujitagarwal/
 
 ---
 
+## Uninstall
+
+If you want to completely remove Multigravity, all profile data, launchers, and shortcuts from your system, you can use either the CLI command or the standalone uninstaller script.
+
+> [!CAUTION]
+> Complete uninstallation permanently removes all created profiles, isolated user data directories, templates, desktop app launchers, and Start Menu shortcuts. An interactive confirmation prompt (`[y/N]`) is displayed before anything is removed.
+
+### Option 1: Via Multigravity CLI
+
+If you already have Multigravity installed:
+
+```bash
+multigravity uninstall
+```
+
+To bypass the interactive confirmation prompt (e.g., in CI or unattended scripts):
+
+```bash
+multigravity uninstall --force
+```
+
+### Option 2: Standalone Uninstaller Scripts
+
+If `multigravity` is not in your `PATH` or you prefer a quick one-line uninstaller:
+
+#### macOS / Linux
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/saur8bh/multigravityide-pro/main/uninstall.sh)"
+```
+
+#### Windows (PowerShell)
+
+```powershell
+irm https://raw.githubusercontent.com/saur8bh/multigravityide-pro/main/uninstall.ps1 | iex
+```
+
+### What Gets Removed
+
+- The `multigravity` script/binary and icons (`~/.multigravity/bin` or `/usr/local/bin` / `~/.local/bin`)
+- All desktop app launchers (`~/Applications/Multigravity *.app` on macOS, `~/.local/share/applications/multigravity-*.desktop` on Linux, and Start Menu shortcuts on Windows)
+- The entire `~/.multigravity` directory containing all profiles, templates, and cached data
+- Shell completion configurations (you can also remove any added completion lines in your `~/.bashrc`, `~/.zshrc`, or PowerShell `$PROFILE`)
+
+---
+
 ## Credits
 
-Multigravity Pro is built on top of [multigravity-cli](https://github.com/sujitagarwal/multigravity-cli) by [Sujit Agarwal](https://github.com/sujitagarwal).
+- **Original Developer**: [Pulkit7070](https://github.com/Pulkit7070) for [Pulkit7070/multigravity-pro: Run multiple Antigravity IDE profiles at the same time — each with its own accounts, settings, and extensions.](https://github.com/Pulkit7070/multigravity-pro/)
+- **Foundational Project**: Built on top of [multigravity-cli](https://github.com/sujitagarwal/multigravity-cli) by [Sujit Agarwal](https://github.com/sujitagarwal).
+- **Antigravity 2.0 IDE Updates**: Maintained and updated for Google's Antigravity 2.0 standalone IDE separation by [saur8bh](https://github.com/saur8bh).
 
 ## License
 

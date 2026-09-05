@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-$REPO = "Pulkit7070/multigravity-pro"
+$REPO = "saur8bh/multigravityide-pro"
 $BRANCH = "main"
 $RAW = "https://raw.githubusercontent.com/$REPO/$BRANCH"
 $INSTALL_DIR = "$env:USERPROFILE\.local\bin"

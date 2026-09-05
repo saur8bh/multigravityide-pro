@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-REPO="Pulkit7070/multigravity-pro"
+REPO="saur8bh/multigravityide-pro"
 BRANCH="main"
 RAW="https://raw.githubusercontent.com/$REPO/$BRANCH"
 INSTALL_DIR="/usr/local/bin"
@@ -60,10 +60,10 @@ echo "  multigravity help"
 echo "  multigravity new <profile-name>"
 echo "  multigravity <profile-name>"
 
-if [ "$PLATFORM" = "linux" ] && ! command -v antigravity &>/dev/null && [ ! -x /usr/share/antigravity/antigravity ]; then
+if [ "$PLATFORM" = "linux" ] && ! command -v antigravity-ide &>/dev/null && [ ! -x /usr/share/antigravity-ide/antigravity-ide ]; then
   echo ""
   echo "Note:"
-  echo "  Antigravity was not found on this machine."
-  echo "  Install Antigravity for Linux and ensure 'antigravity' is on PATH,"
-  echo "  or launch Multigravity with MULTIGRAVITY_APP=/path/to/antigravity."
+  echo "  Antigravity IDE was not found on this machine."
+  echo "  Install Antigravity IDE for Linux and ensure 'antigravity-ide' is on PATH,"
+  echo "  or launch Multigravity with MULTIGRAVITY_APP=/path/to/antigravity-ide."
 fi

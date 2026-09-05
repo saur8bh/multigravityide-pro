@@ -46,32 +46,56 @@ user_data_dir() {
 
   case "$(platform)" in
     darwin)
-      printf '%s/Library/Application Support/Antigravity\n' "$profile_path"
+      if [ -d "$profile_path/Library/Application Support/Antigravity" ] && [ ! -d "$profile_path/Library/Application Support/Antigravity IDE" ]; then
+        printf '%s/Library/Application Support/Antigravity\n' "$profile_path"
+      else
+        printf '%s/Library/Application Support/Antigravity IDE\n' "$profile_path"
+      fi
       ;;
     linux)
-      printf '%s/.config/Antigravity\n' "$profile_path"
+      if [ -d "$profile_path/.config/Antigravity" ] && [ ! -d "$profile_path/.config/Antigravity IDE" ]; then
+        printf '%s/.config/Antigravity\n' "$profile_path"
+      else
+        printf '%s/.config/Antigravity IDE\n' "$profile_path"
+      fi
       ;;
   esac
 }
 
 extensions_dir() {
   local profile_path=$1
-  printf '%s/.antigravity/extensions\n' "$profile_path"
+  if [ -d "$profile_path/.antigravity/extensions" ] && [ ! -d "$profile_path/.antigravity-ide/extensions" ]; then
+    printf '%s/.antigravity/extensions\n' "$profile_path"
+  else
+    printf '%s/.antigravity-ide/extensions\n' "$profile_path"
+  fi
 }
 
 default_user_data_dir() {
   case "$(platform)" in
     darwin)
-      printf '%s/Library/Application Support/Antigravity\n' "$HOME"
+      if [ -d "$HOME/Library/Application Support/Antigravity IDE" ]; then
+        printf '%s/Library/Application Support/Antigravity IDE\n' "$HOME"
+      else
+        printf '%s/Library/Application Support/Antigravity\n' "$HOME"
+      fi
       ;;
     linux)
-      printf '%s/.config/Antigravity\n' "$HOME"
+      if [ -d "$HOME/.config/Antigravity IDE" ]; then
+        printf '%s/.config/Antigravity IDE\n' "$HOME"
+      else
+        printf '%s/.config/Antigravity\n' "$HOME"
+      fi
       ;;
   esac
 }
 
 default_extensions_dir() {
-  printf '%s/.antigravity/extensions\n' "$HOME"
+  if [ -d "$HOME/.antigravity-ide/extensions" ]; then
+    printf '%s/.antigravity-ide/extensions\n' "$HOME"
+  else
+    printf '%s/.antigravity/extensions\n' "$HOME"
+  fi
 }
 
 templates_dir() {
@@ -142,10 +166,15 @@ find_app() {
   case "$(platform)" in
     darwin)
       for candidate in \
+        "/Applications/Antigravity IDE.app" \
+        "$HOME/Applications/Antigravity IDE.app" \
+        "/Applications/Antigravity-IDE.app" \
+        "$HOME/Applications/Antigravity-IDE.app" \
+        "antigravity-ide" \
         "/Applications/Antigravity.app" \
         "$HOME/Applications/Antigravity.app"
       do
-        if [ -d "$candidate" ]; then
+        if [ -d "$candidate" ] || command_or_path "$candidate" >/dev/null 2>&1; then
           printf '%s\n' "$candidate"
           return 0
         fi
@@ -153,6 +182,13 @@ find_app() {
       ;;
     linux)
       for candidate in \
+        "antigravity-ide" \
+        "/usr/share/antigravity-ide/antigravity-ide" \
+        "/usr/bin/antigravity-ide" \
+        "/usr/local/bin/antigravity-ide" \
+        "$HOME/.local/bin/antigravity-ide" \
+        "$HOME/Applications/Antigravity-IDE.AppImage" \
+        "$HOME/Applications/Antigravity IDE.AppImage" \
         "antigravity" \
         "/usr/share/antigravity/antigravity" \
         "/usr/bin/antigravity" \
@@ -177,10 +213,10 @@ require_app() {
   if ! app="$(find_app)"; then
     case "$(platform)" in
       darwin)
-        abort "Antigravity.app was not found. Install Antigravity or set MULTIGRAVITY_APP to the app bundle path."
+        abort "Antigravity IDE was not found. Install Antigravity IDE or set MULTIGRAVITY_APP to the app bundle path."
         ;;
       linux)
-        abort "Antigravity was not found. Install the Linux app so 'antigravity' is on PATH, or set MULTIGRAVITY_APP to the executable path."
+        abort "Antigravity IDE was not found. Install Antigravity IDE so 'antigravity-ide' is on PATH, or set MULTIGRAVITY_APP to the executable path."
         ;;
     esac
   fi
@@ -196,7 +232,8 @@ create_profile_layout() {
 
   case "$(platform)" in
     darwin)
-      mkdir -p "$profile_path/Library/Application Support"
+      mkdir -p "$profile_path/Library/Application Support/Antigravity IDE"
+      mkdir -p "$profile_path/Library/Application Support/Antigravity"
 
       if [ ! -e "$profile_path/Library/Keychains" ] && [ -d "$HOME/Library/Keychains" ]; then
         ln -s "$HOME/Library/Keychains" "$profile_path/Library/Keychains"
@@ -204,6 +241,7 @@ create_profile_layout() {
       ;;
     linux)
       mkdir -p \
+        "$profile_path/.config/Antigravity IDE" \
         "$profile_path/.config/Antigravity" \
         "$profile_path/.cache" \
         "$profile_path/.local/share" \
@@ -251,15 +289,24 @@ create_auth_only_layout() {
     mkdir -p "$ext_dir"
   fi
 
+  # Compatibility link for .antigravity/extensions if different
+  if [ -d "$default_ext" ] && [ "$ext_dir" != "$profile_path/.antigravity/extensions" ]; then
+    mkdir -p "$profile_path/.antigravity"
+    ln -sf "$default_ext" "$profile_path/.antigravity/extensions"
+  fi
+
   case "$(platform)" in
     darwin)
-      mkdir -p "$profile_path/Library/Application Support"
+      mkdir -p "$profile_path/Library/Application Support/Antigravity IDE"
+      mkdir -p "$profile_path/Library/Application Support/Antigravity"
       if [ ! -e "$profile_path/Library/Keychains" ] && [ -d "$HOME/Library/Keychains" ]; then
         ln -s "$HOME/Library/Keychains" "$profile_path/Library/Keychains"
       fi
       ;;
     linux)
       mkdir -p \
+        "$profile_path/.config/Antigravity IDE" \
+        "$profile_path/.config/Antigravity" \
         "$profile_path/.cache" \
         "$profile_path/.local/share" \
         "$profile_path/.local/state"
@@ -373,12 +420,12 @@ EOF
 Version=1.0
 Type=Application
 Name=Multigravity $profile
-Comment=Launch the $profile Antigravity profile
+Comment=Launch the $profile Antigravity IDE profile
 Exec=$(desktop_quote "$launcher_path") %F
-Icon=antigravity
+Icon=antigravity-ide
 Terminal=false
 StartupNotify=false
-StartupWMClass=Antigravity
+StartupWMClass=Antigravity IDE
 Categories=TextEditor;Development;IDE;
 MimeType=application/x-antigravity-workspace;
 EOF
@@ -632,11 +679,11 @@ doctor_cli() {
     errors=$((errors + 1))
   fi
 
-  # 2. Antigravity Installation
+  # 2. Antigravity IDE Installation
   if app=$(find_app); then
-    echo "  [✓] Antigravity: Found at $app"
+    echo "  [✓] Antigravity IDE: Found at $app"
   else
-    echo "  [✗] Antigravity: Not found. Ensure it is installed or set MULTIGRAVITY_APP."
+    echo "  [✗] Antigravity IDE: Not found. Ensure it is installed or set MULTIGRAVITY_APP."
     errors=$((errors + 1))
   fi
 
@@ -724,7 +771,7 @@ profile_stats() {
 }
 
 update_cli() {
-  local script_url="https://raw.githubusercontent.com/sujitagarwal/multigravity-cli/main/multigravity"
+  local script_url="https://raw.githubusercontent.com/saur8bh/multigravityide-pro/main/multigravity"
   local target
   target="$(script_path)"
 
@@ -741,6 +788,84 @@ update_cli() {
     rm -f "$target.tmp"
     abort "failed to download update"
   fi
+}
+
+uninstall_cli() {
+  local force=false
+  for arg in "$@"; do
+    case "$arg" in
+      -y|--yes|--force) force=true ;;
+    esac
+  done
+
+  echo "=========================================="
+  echo "   Multigravity IDE Pro - Uninstaller    "
+  echo "=========================================="
+  echo ""
+  echo "This will remove:"
+  echo "  1. Multigravity CLI binary and icon files"
+  echo "  2. Application launchers & desktop shortcuts"
+  echo "  3. ALL profile data & templates in $BASE"
+  echo ""
+
+  if [ "$force" != "true" ]; then
+    printf "Are you sure you want to completely uninstall Multigravity and DELETE ALL profiles? [y/N] "
+    read -r confirm
+    case "$confirm" in
+      [yY]|[yY][eE][sS]) ;;
+      *)
+        echo "Uninstall cancelled. Nothing was removed."
+        return 0
+        ;;
+    esac
+  fi
+
+  # 1. Shortcuts
+  case "$(platform)" in
+    darwin)
+      if [ -d "$HOME/Applications" ]; then
+        for app in "$HOME/Applications"/Multigravity\ *.app; do
+          if [ -d "$app" ]; then
+            rm -rf "$app"
+            echo "  Removed shortcut: $app"
+          fi
+        done
+      fi
+      ;;
+    linux)
+      if [ -d "$HOME/.local/share/multigravity" ]; then
+        rm -rf "$HOME/.local/share/multigravity"
+        echo "  Removed: $HOME/.local/share/multigravity"
+      fi
+      for desktop in "$HOME/.local/share/applications"/multigravity-*.desktop; do
+        if [ -f "$desktop" ]; then
+          rm -f "$desktop"
+          echo "  Removed desktop file: $desktop"
+        fi
+      done
+      ;;
+  esac
+
+  # 2. Profiles directory
+  if [ -d "$BASE" ]; then
+    echo "Removing all profiles and templates in $BASE..."
+    rm -rf "$BASE"
+    echo "  Removed: $BASE"
+  fi
+
+  # 3. Binary file
+  local target
+  target="$(script_path 2>/dev/null || true)"
+  if [ -n "$target" ] && [ -f "$target" ]; then
+    local bin_dir
+    bin_dir="$(dirname "$target")"
+    rm -f "$target"
+    [ -f "$bin_dir/icon.icns" ] && rm -f "$bin_dir/icon.icns"
+    echo "  Removed: $target"
+  fi
+
+  echo ""
+  echo "[OK] Multigravity IDE Pro has been completely uninstalled."
 }
 
 help_completion() {
@@ -788,6 +913,7 @@ _multigravity() {
         'doctor:Run system diagnosis'
         'stats:Show profile storage usage'
         'completion:Setup shell completion'
+        'uninstall:Completely uninstall Multigravity and delete all profiles'
         'help:Show help'
     )
     local curcontext="$curcontext" state line
@@ -820,8 +946,7 @@ _multigravity_completions() {
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
-    opts="new list status rename delete clone template export import update doctor stats completion help"
- pocket
+    opts="new list status rename delete clone template export import update doctor stats completion uninstall help"
 
     if [[ ${COMP_CWORD} -eq 1 ]] ; then
         local profiles=$(multigravity list --raw 2>/dev/null)
@@ -1076,13 +1201,14 @@ Commands:
   doctor                  Run a system diagnosis
   stats                   Show storage usage per profile
   completion              Show setup instructions for shell completion
-  <name> [args...]        Launch Antigravity with the given profile
+  uninstall [--force]     Completely uninstall Multigravity and delete all profiles
+  <name> [args...]        Launch Antigravity IDE with the given profile
   help                    Show this help
 
 Profile names: alphanumeric and hyphens only (e.g. work, personal, test-1)
 
 Environment:
-  MULTIGRAVITY_APP        Override the Antigravity app path or command
+  MULTIGRAVITY_APP        Override the Antigravity IDE app path or command
   MULTIGRAVITY_HOME       Override the profile storage directory
 EOF
 }
@@ -1137,6 +1263,10 @@ case "$cmd" in
     ;;
   stats)
     profile_stats
+    ;;
+  uninstall)
+    shift
+    uninstall_cli "$@"
     ;;
   completion)
     if [ -n "${2-}" ]; then
