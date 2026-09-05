@@ -201,6 +201,44 @@ function Invoke-LaunchProfile {
     $env:APPDATA = "$PROFILE_DIR\AppData\Roaming"
     $env:LOCALAPPDATA = "$PROFILE_DIR\AppData\Local"
 
+    # Auto-migrate legacy/split directory if data exists in AppData\Roaming\Antigravity
+    $legacyDataDir = "$PROFILE_DIR\AppData\Roaming\Antigravity"
+    $standardDataDir = "$PROFILE_DIR\AppData\Roaming\Antigravity IDE"
+    if (Test-Path $legacyDataDir) {
+        $legacyStorage = "$legacyDataDir\User\globalStorage\state.vscdb"
+        $standardStorage = "$standardDataDir\User\globalStorage\state.vscdb"
+        $shouldMigrate = $false
+        if (!(Test-Path $standardDataDir)) {
+            $shouldMigrate = $true
+        } elseif ((Test-Path $legacyStorage) -and (!(Test-Path $standardStorage) -or ((Get-Item $legacyStorage).LastWriteTime -gt (Get-Item $standardStorage).LastWriteTime))) {
+            $shouldMigrate = $true
+        }
+
+        if ($shouldMigrate) {
+            # Backup symlinks before replacing if this is an auth-only profile
+            $symlinks = @{}
+            if (Test-Path "$standardDataDir\User") {
+                foreach ($item in @("settings.json", "keybindings.json", "snippets")) {
+                    $itemPath = "$standardDataDir\User\$item"
+                    if ((Test-Path $itemPath) -and (Get-Item $itemPath).LinkType) {
+                        $symlinks[$item] = (Get-Item $itemPath).Target
+                    }
+                }
+            }
+            if (Test-Path $standardDataDir) {
+                Remove-Item -Path $standardDataDir -Recurse -Force -ErrorAction SilentlyContinue
+            }
+            Copy-Item -Path $legacyDataDir -Destination $standardDataDir -Recurse -Force -ErrorAction SilentlyContinue
+            # Restore symlinks if needed
+            foreach ($key in $symlinks.Keys) {
+                $dest = "$standardDataDir\User\$key"
+                if (Test-Path $dest) { Remove-Item $dest -Force -Recurse -ErrorAction SilentlyContinue }
+                New-Item -ItemType SymbolicLink -Path $dest -Target $symlinks[$key] -ErrorAction SilentlyContinue | Out-Null
+            }
+            Remove-Item -Path $legacyDataDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
     $userDataDir = "$PROFILE_DIR\AppData\Roaming\Antigravity IDE"
     $extDir = "$PROFILE_DIR\.antigravity-ide\extensions"
     if (!(Test-Path $extDir) -and (Test-Path "$PROFILE_DIR\.antigravity\extensions")) {
@@ -212,7 +250,20 @@ function Invoke-LaunchProfile {
         $allArgs += $ArgsToForward
     }
     
-    Start-Process -FilePath $APP -ArgumentList $allArgs
+    # Properly quote arguments containing spaces so Start-Process does not split them
+    $escapedArgs = @()
+    foreach ($a in $allArgs) {
+        if ($null -ne $a) {
+            $str = [string]$a
+            if ($str -match '\s' -and -not ($str.StartsWith('"') -and $str.EndsWith('"'))) {
+                $escapedArgs += "`"$($str.Replace('"', '\"'))`""
+            } else {
+                $escapedArgs += $str
+            }
+        }
+    }
+
+    Start-Process -FilePath $APP -ArgumentList $escapedArgs
 }
 
 function Invoke-ListProfiles {
